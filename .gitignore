@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite database (runtime data, not source)
+secure_device.db
+*.db
+
+# C++ build output
+*.obj
+*.exe
+*.ilk
+*.pdb
+*.out
+device-simulator/build/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
