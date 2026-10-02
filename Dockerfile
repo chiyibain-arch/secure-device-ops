@@ -22,12 +22,6 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-# Apply current Debian security patches (e.g. libpcre2-8-0, openssl/libssl)
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=builder /install /usr/local
 
 # Only the application source the service needs at runtime — never .venv,
@@ -45,8 +39,33 @@ RUN find /usr/local/lib/python3.12/site-packages -maxdepth 1 \
     -exec rm -rf {} + \
     && rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12 /usr/local/bin/wheel
 
-RUN useradd --no-create-home --shell /usr/sbin/nologin appuser \
+# Apply current Debian security patches, then strip every OS package the app
+# does not actually use at runtime (verified via ldd against the interpreter,
+# lib-dynload extensions, and pydantic_core: only libc/libm/libssl/libcrypto/
+# libsqlite3/libz/libffi/libbz2/liblzma/libgdbm/libdb/libuuid/libcrypt remain
+# NEEDED). This removes perl, the NIS/Kerberos/RPC stack, mount/e2fsprogs
+# tools, curses/readline, PAM, SELinux policy-management libs, systemd/udev
+# client libs, and the package manager itself — eliminating the OS CVEs that
+# have no upstream fix (e.g. in bsdutils/util-linux, libncursesw6, perl-base)
+# by removing the vulnerable package rather than suppressing the finding.
+# useradd must run before adduser/login/passwd are removed below.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && useradd --no-create-home --shell /usr/sbin/nologin appuser \
+    && apt-get remove -y --allow-remove-essential \
+    util-linux util-linux-extra mount bsdutils e2fsprogs libext2fs2 libss2 logsave libcom-err2 \
+    libblkid1 libmount1 libsmartcols1 \
+    libkrb5-3 libgssapi-krb5-2 libk5crypto3 libkrb5support0 libkeyutils1 libnsl2 libtirpc3 libtirpc-common \
+    libncursesw6 ncurses-base ncurses-bin libreadline8 readline-common \
+    libsemanage2 libsemanage-common libsepol2 libcap-ng0 libcap2 \
+    libudev1 libsystemd0 perl-base adduser login passwd \
+    libpam-modules libpam-modules-bin libpam-runtime libpam0g libaudit1 libaudit-common \
+    libgcrypt20 libgnutls30 libgpg-error0 libhogweed6 liblz4-1 libnettle8 \
+    libp11-kit0 libseccomp2 libstdc++6 libtasn1-6 libxxhash0 \
+    apt libapt-pkg6.0 gpgv debian-archive-keyring \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
     && chown -R appuser:appuser /app
+
 USER appuser
 
 EXPOSE 8000
