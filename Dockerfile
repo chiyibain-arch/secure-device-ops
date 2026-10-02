@@ -4,7 +4,7 @@
 # Builder: resolve and install Python dependencies in isolation
 # from the final runtime image.
 ############################################################
-FROM python:3.12-slim-trixie AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" "wheel>=0.46.2
 ############################################################
 # Runtime: minimal image containing only what's needed to run the API.
 ############################################################
-FROM python:3.12-slim-trixie
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
