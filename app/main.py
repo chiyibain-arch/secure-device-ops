@@ -113,7 +113,12 @@ def health_check():
     }
 
 
-@app.get("/readyz")
+@app.get(
+    "/readyz",
+    responses={
+        503: {"description": "Database unavailable"}
+    }
+)
 def readiness_check():
 
     try:
@@ -227,7 +232,12 @@ def get_telemetry():
 # RETRIEVE TELEMETRY FOR ONE DEVICE
 # =========================================================
 
-@app.get("/api/v1/devices/{device_id}/telemetry")
+@app.get(
+    "/api/v1/devices/{device_id}/telemetry",
+    responses={
+        404: {"description": "No telemetry found for this device"}
+    }
+)
 def get_device_telemetry(device_id: str):
 
     connection = get_db_connection()

@@ -19,3 +19,13 @@ device-simulator/build/
 # OS / editor noise
 .DS_Store
 Thumbs.db
+
+# Local logs
+*.log
+
+# Local security / analysis tooling
+.sonar/
+gitleaks-report.json
+
+# Locally generated SBOM reports
+sbom*.json

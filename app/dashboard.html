@@ -140,60 +140,39 @@
 
     </div>
 
-    <script>
+    <script type="module">
 
-        async function loadTelemetry() {
+        function setStatusMessage(message) {
+            document.getElementById("statusMessage").textContent = message;
+        }
 
-            try {
+        function updateSummaryCards(records) {
+            document.getElementById("recordCount").textContent =
+                records.length;
 
-                const response = await fetch(
-                    "http://127.0.0.1:8000/api/v1/telemetry"
-                );
+            const devices = new Set(
+                records.map(record => record.device_id)
+            );
+            document.getElementById("deviceCount").textContent =
+                devices.size;
 
-                if (!response.ok) {
-                    throw new Error(`API returned status ${response.status}`);
-                }
+            const warningCount = records.filter(
+                record => record.status === "WARNING"
+            ).length;
+            document.getElementById("warningCount").textContent =
+                warningCount;
 
-                const data = await response.json();
+            const criticalCount = records.filter(
+                record => record.status === "CRITICAL"
+            ).length;
+            document.getElementById("criticalCount").textContent =
+                criticalCount;
+        }
 
-                document.getElementById("statusMessage").textContent = "";
+        function buildTelemetryRow(record) {
+            const row = document.createElement("tr");
 
-                const records = data.records || [];
-
-                document.getElementById("recordCount").textContent =
-                    records.length;
-
-                const devices = new Set(
-                    records.map(record => record.device_id)
-                );
-
-                document.getElementById("deviceCount").textContent =
-                    devices.size;
-
-                const warning = records.filter(
-                    record => record.status === "WARNING"
-                );
-
-                document.getElementById("warningCount").textContent =
-                    warning.length;
-
-                const critical = records.filter(
-                    record => record.status === "CRITICAL"
-                );
-
-                document.getElementById("criticalCount").textContent =
-                    critical.length;
-
-                const table =
-                    document.getElementById("telemetryTable");
-
-                table.innerHTML = "";
-
-                records.forEach(record => {
-
-                    const row = document.createElement("tr");
-
-                    row.innerHTML = `
+            row.innerHTML = `
                 <td>${record.device_id}</td>
                 <td>${record.device_type}</td>
                 <td>${record.firmware_version}</td>
@@ -206,24 +185,49 @@
                 <td>${record.received_at}</td>
             `;
 
-                    table.appendChild(row);
+            return row;
+        }
 
-                });
+        function renderTelemetryTable(records) {
+            const table = document.getElementById("telemetryTable");
+            table.innerHTML = "";
+
+            records.forEach(record => {
+                table.appendChild(buildTelemetryRow(record));
+            });
+        }
+
+        async function fetchTelemetryRecords() {
+            const response = await fetch(
+                "http://127.0.0.1:8000/api/v1/telemetry"
+            );
+
+            if (!response.ok) {
+                throw new Error(`API returned status ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.records || [];
+        }
+
+        async function loadTelemetry() {
+            try {
+                const records = await fetchTelemetryRecords();
+
+                setStatusMessage("");
+                updateSummaryCards(records);
+                renderTelemetryTable(records);
 
             } catch (error) {
+                console.error("Unable to retrieve telemetry:", error);
 
-                console.error(
-                    "Unable to retrieve telemetry:",
-                    error
+                setStatusMessage(
+                    "Unable to reach the SecureDeviceOps API. Is the backend running at http://127.0.0.1:8000?"
                 );
-
-                document.getElementById("statusMessage").textContent =
-                    "Unable to reach the SecureDeviceOps API. Is the backend running at http://127.0.0.1:8000?";
-
             }
         }
 
-        loadTelemetry();
+        await loadTelemetry();
 
         setInterval(loadTelemetry, 5000);
 
