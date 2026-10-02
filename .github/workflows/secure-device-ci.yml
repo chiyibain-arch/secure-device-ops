@@ -6,14 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-security:
     runs-on: ubuntu-latest
 
     steps:
       # Download repository code onto the GitHub runner
+      # Full history (not the default shallow clone) is required so Gitleaks
+      # can resolve commit ranges instead of failing with an unknown revision.
       - name: Checkout source code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Configure the Python runtime
       - name: Set up Python
@@ -49,7 +56,7 @@ jobs:
         run: docker build -t secure-device-ops:${{ github.sha }} .
       # Scan the built container image for vulnerabilities
       - name: Run Trivy container vulnerability scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: secure-device-ops:${{ github.sha }}
           format: table
